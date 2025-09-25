@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "max_contracts": {
+      "enabled": true,
+      "max_size": 2,
+      "severity": "high",
+      "auto_flatten": true
+    }
+  },
+  "global": {
+    "log_level": "INFO",
+    "dry_run": true
+  }
+}

@@ -1,0 +1,144 @@
+================================================================================
+🎯 RISK RULE EXECUTION PATH - WHERE THEY GO AND HOW HOOKS FIRE
+================================================================================
+
+This document shows EXACTLY where your risk rules "go" and how hooks execute.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           EXECUTION FLOW DIAGRAM                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+[1] EVENT FIRES
+    ↓
+    🎯 POSITION_UPDATED Event (EventType.POSITION_UPDATED)
+       Payload: {contract_id: "MNQ", size: 5, type: 1}
+
+    ↓
+[2] RISK RULE EVALUATES
+    ↓
+    🛡️ MaxContractsRule.check() executes
+       ├── Extracts position data from event
+       ├── Compares size (5) > max_size (2)
+       └── Returns FALSE (breach detected!)
+
+    ↓
+[3] BREACH HANDLING
+    ↓
+    🚨 Breach detected - _handle_breach() called
+       ├── Logs breach warning
+       ├── Increments breach counter
+       └── Calls _auto_flatten() if enabled
+
+    ↓
+[4] HOOK EXECUTES
+    ↓
+    🪝 on_breach hook fires
+       ├── Hook function receives breach data
+       ├── Can send email, Slack, etc.
+       └── Can trigger custom logic
+
+    ↓
+[5] API CALL EXECUTES
+    ↓
+    🔌 close_position_direct() API call
+       ├── Broker API receives close request
+       ├── Position closure executed
+       └── Returns success/failure
+
+    ↓
+[6] FLOW COMPLETES
+    ↓
+    ✅ Execution flow ends
+       ├── Result logged
+       ├── Position closed
+       └── Hook completion confirmed
+
+================================================================================
+🎯 DETAILED EXECUTION TRACE EXAMPLE
+================================================================================
+
+[Flow-1] 14:30:25.123 | FLOW_START | 🚀 Starting RISK_RULE_EVALUATION flow
+[Flow-1]   └─ contract_id: CON.F.US.MNQ.Z25
+[Flow-1]   └─ size: 5
+
+[Flow-1] 14:30:25.124 | RISK_EVAL | 🛡️ MaxContractsRule evaluating
+[Flow-1]   └─ breach_detected: true
+
+[Flow-1] 14:30:25.125 | EVAL_DETAIL | 📊 Size check: 5 > 2
+[Flow-1]   └─ will_breach: true
+
+[Flow-1] 14:30:25.126 | HOOK_EXEC | 🪝 on_breach_internal executing
+[Flow-1]   └─ breach_size: 5
+[Flow-1]   └─ limit: 2
+
+[Flow-1] 14:30:25.127 | HOOK_EXEC | 🪝 auto_flatten_start executing
+[Flow-1]   └─ contract_id: CON.F.US.MNQ.Z25
+
+[Flow-1] 14:30:25.128 | API_CALL | 🔌 close_position_direct calling
+[Flow-1]   └─ method: close_position_direct
+[Flow-1]   └─ result: {'success': True}
+
+[Flow-1] 14:30:25.129 | HOOK_EXEC | 🪝 auto_flatten_complete executing
+[Flow-1]   └─ status: success
+
+[Flow-1] 14:30:25.130 | FLOW_END | ✅ Flow completed in 0.007s
+[Flow-1]   └─ final_result: BREACH_HANDLED
+[Flow-1]   └─ total_steps: 8
+
+================================================================================
+🪝 HOOK EXECUTION DETAILS
+================================================================================
+
+Hooks execute at these specific points:
+
+1. **on_breach** - Fires when ANY risk rule detects a breach
+   ├── Called from: MaxContractsRule._handle_breach()
+   ├── Data: breach details, contract info, rule config
+   ├── Can: Send alerts, log to external systems, trigger actions
+
+2. **auto_flatten_start** - Fires before auto-flatten begins
+   ├── Called from: MaxContractsRule._auto_flatten()
+   ├── Data: contract_id, position details
+   ├── Can: Pre-flatten notifications, position validation
+
+3. **auto_flatten_complete** - Fires after auto-flatten finishes
+   ├── Called from: MaxContractsRule._auto_flatten()
+   ├── Data: success/failure, final position state
+   ├── Can: Success confirmations, error handling, post-trade logic
+
+================================================================================
+🔌 API CALL EXECUTION
+================================================================================
+
+API calls happen in this sequence:
+
+1. **Risk Rule** → Detects breach
+2. **Hook** → on_breach fires (can include API calls)
+3. **Auto-Flatten** → close_position_direct() API call
+4. **Result** → API response processed
+5. **Completion Hook** → auto_flatten_complete fires
+
+API Methods Available:
+├── close_position_direct() - Immediate market close
+├── place_order() - Place limit/market orders
+├── get_positions() - Get current positions
+└── cancel_order() - Cancel pending orders
+
+================================================================================
+🎯 WHERE RISK RULES "GO" - THE COMPLETE PATH
+================================================================================
+
+Risk rules don't "go" anywhere - they EXECUTE in this sequence:
+
+1. **Event Reception** → Broker sends POSITION_UPDATED event
+2. **Rule Evaluation** → MaxContractsRule.check() runs
+3. **Decision Logic** → Compare position size vs limit
+4. **Action Trigger** → Breach detected = action required
+5. **Hook Execution** → on_breach hooks fire
+6. **API Execution** → Broker API calls execute
+7. **Result Processing** → Success/failure handled
+8. **Completion** → Flow ends with final status
+
+Your 32 risk rules will all follow this exact same path!
+
+================================================================================
